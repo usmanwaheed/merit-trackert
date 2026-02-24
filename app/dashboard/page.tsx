@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { UserLimitNotice } from "@/components/dashboard/user-limit-notice"
 
 export default function DashboardPage() {
   const { user, company, subscription } = useAuthStore()
@@ -90,6 +91,9 @@ export default function DashboardPage() {
           </Badge>
         )}
       </div>
+
+      {/* User Limit Notice (for company admins only) */}
+      <UserLimitNotice />
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

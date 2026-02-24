@@ -23,6 +23,7 @@ import {
   User,
   ClipboardCheck,
   Target, // Added for Profile
+  Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"

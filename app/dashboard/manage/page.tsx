@@ -82,6 +82,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import type { User, UserRole, Department, Sop, Notification } from "@/lib/types/index"
+import { SubscriptionManagement } from "@/components/dashboard/subscription-management"
 
 export default function ManagePage() {
   const { user } = useAuthStore()
@@ -515,6 +516,7 @@ export default function ManagePage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="activity">Activity Log</TabsTrigger>
+          <TabsTrigger value="subscription">Subscription</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -1122,6 +1124,11 @@ export default function ManagePage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Subscription Tab */}
+        <TabsContent value="subscription" className="space-y-6">
+          <SubscriptionManagement />
         </TabsContent>
       </Tabs>
 
