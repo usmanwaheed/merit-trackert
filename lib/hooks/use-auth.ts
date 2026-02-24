@@ -25,7 +25,7 @@ export function useLogin() {
                 password: data.password
             };
 
-            return api.post<AuthResponse>('/login', payload);
+            return api.post<AuthResponse>('/auth/login', payload);
         },
         onSuccess: (res, variables) => {
             // Store token and user data
@@ -54,7 +54,7 @@ export function useRegisterCompany() {
 
     return useMutation({
         mutationFn: (data: RegisterCompanyRequest) =>
-            api.post<AuthResponse>('/register/company', data),
+            api.post<AuthResponse>('/auth/register/company', data),
         onSuccess: (res) => {
             // Clear queries
             queryClient.clear();
@@ -78,7 +78,7 @@ export function useRegisterUser() {
 
     return useMutation({
         mutationFn: (data: RegisterUserRequest) =>
-            api.post<AuthResponse>('/register/user', data),
+            api.post<AuthResponse>('/auth/register/user', data),
         onSuccess: (res) => {
             // Clear queries
             queryClient.clear();
@@ -101,7 +101,7 @@ export function useMe() {
 
     return useQuery({
         queryKey: authKeys.me(),
-        queryFn: () => api.get<User>('/me'),
+        queryFn: () => api.get<User>('/auth/me'),
         enabled: isAuthenticated,
         staleTime: 5 * 60 * 1000,
         retry: 1,
@@ -116,7 +116,7 @@ export function useSubscriptionStatus() {
     return useQuery({
         queryKey: authKeys.subscription(),
         queryFn: async () => {
-            const data = await api.get<SubscriptionInfo>('/subscription-status');
+            const data = await api.get<SubscriptionInfo>('/auth/subscription-status');
             setSubscription(data);
             return data;
         },
@@ -124,6 +124,76 @@ export function useSubscriptionStatus() {
         staleTime: 60 * 1000,
         refetchInterval: 5 * 60 * 1000,
         retry: 1,
+    });
+}
+
+// Get company user statistics
+export function useCompanyUserStats() {
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+    const user = useAuthStore((s) => s.user);
+    const company = useAuthStore((s) => s.company);
+
+    return useQuery({
+        queryKey: [...authKeys.all, 'company-stats', company?.id],
+        queryFn: async () => {
+            const data = await api.get<{
+                currentUsers: number;
+                maxUsers: number;
+                percentUsed: number;
+                canAddMore: boolean;
+            }>('/auth/company-stats');
+            return data;
+        },
+        enabled: isAuthenticated && user?.role === 'COMPANY',
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        retry: 1,
+    });
+}
+
+// Get subscription plans
+export function useSubscriptionPlans() {
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+    return useQuery({
+        queryKey: [...authKeys.all, 'subscription-plans'],
+        queryFn: async () => {
+            const data = await api.get<Array<{
+                id: string;
+                name: string;
+                monthlyPrice: number;
+                yearlyPrice: number;
+                maxUsers: number;
+                features: string[];
+            }>>('/auth/subscription/plans');
+            return data;
+        },
+        enabled: isAuthenticated,
+        staleTime: 10 * 60 * 1000, // 10 minutes
+        retry: 1,
+    });
+}
+
+// Upgrade subscription
+export function useUpgradeSubscription() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (planName: string) => {
+            return api.post<{
+                success: boolean;
+                message: string;
+                company: any;
+            }>('/auth/subscription/upgrade', { planName });
+        },
+        onSuccess: (data) => {
+            // Invalidate relevant queries
+            queryClient.invalidateQueries({ queryKey: authKeys.subscription() });
+            queryClient.invalidateQueries({ queryKey: [...authKeys.all, 'company-stats'] });
+            toast.success(data.message);
+        },
+        onError: (error) => {
+            toast.error(getErrorMessage(error));
+        },
     });
 }
 
