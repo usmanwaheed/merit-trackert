@@ -1,7 +1,7 @@
 // app/dashboard/manage/page.tsx
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useMyCompany, useCompanyStats } from "@/lib/hooks/use-companies"
 import { useUsers, useUpdateUserRole, useDeactivateUser, useActivateUser, useLeaderboard } from "@/lib/hooks/use-users"
@@ -1128,7 +1128,9 @@ export default function ManagePage() {
 
         {/* Subscription Tab */}
         <TabsContent value="subscription" className="space-y-6">
-          <SubscriptionManagement />
+          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+            <SubscriptionManagement />
+          </Suspense>
         </TabsContent>
       </Tabs>
 

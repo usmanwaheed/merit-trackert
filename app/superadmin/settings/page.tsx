@@ -41,7 +41,9 @@ export default function Settings() {
 
   const handleSave = async () => {
     if (!form) return;
-    await updateMutation.mutateAsync(form);
+    // Strip id and any other non-DTO fields before sending
+    const { id, createdAt, updatedAt, ...settingsData } = form;
+    await updateMutation.mutateAsync(settingsData);
   };
 
   if (isLoading || !form) {
@@ -305,6 +307,7 @@ export default function Settings() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="3">3 days</SelectItem>
                         <SelectItem value="7">7 days</SelectItem>
                         <SelectItem value="14">14 days</SelectItem>
                         <SelectItem value="30">30 days</SelectItem>

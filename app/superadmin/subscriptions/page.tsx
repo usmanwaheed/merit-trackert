@@ -21,6 +21,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { cn, formatDate } from "@/lib/utils";
+import {
   Table,
   TableBody,
   TableCell,
@@ -29,7 +47,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatsCard } from "@/components/superadmin/stats-card";
-import { useSuperadminSubscriptionsData, useCancelSubscription } from "@/lib/hooks/use-superadmin-subscriptions";
+import {
+  useSuperadminSubscriptionsData,
+  useCancelSubscription,
+  useUpdateSubscription
+} from "@/lib/hooks/use-superadmin-subscriptions";
+import { useSearchParams, useRouter } from "next/navigation";
 
 interface Subscription {
   id: string;
@@ -70,7 +93,18 @@ export default function Subscriptions() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [billingFilter, setBillingFilter] = useState("all");
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const companyIdFilter = searchParams.get("companyId");
+
   const cancelMutation = useCancelSubscription();
+  const updateMutation = useUpdateSubscription();
+
+  const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isChangePlanOpen, setIsChangePlanOpen] = useState(false);
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
+  const [newPlanId, setNewPlanId] = useState<string>("");
 
   const formattedSubscriptions = useMemo(() => {
     return subscriptions.map((subscription) => {
@@ -82,7 +116,7 @@ export default function Subscriptions() {
         plan: subscription.planName ?? plan?.name ?? "Plan",
         billingCycle: subscription.period === "annual" ? "yearly" : "monthly",
         amount: amount ?? 0,
-        nextBilling: subscription.renewsOn,
+        nextBilling: formatDate(subscription.renewsOn),
         uiStatus:
           subscription.status === "trial"
             ? "trialing"
@@ -97,13 +131,32 @@ export default function Subscriptions() {
     return formattedSubscriptions.filter((sub) => {
       const matchesSearch =
         sub.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        sub.id.toLowerCase().includes(searchQuery.toLowerCase());
+        sub.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (companyIdFilter && sub.companyId === companyIdFilter);
+
+      const matchesCompanyId = !companyIdFilter || sub.companyId === companyIdFilter;
       const matchesPlan = planFilter === "all" || sub.plan.toLowerCase() === planFilter.toLowerCase();
       const matchesStatus = statusFilter === "all" || sub.uiStatus === statusFilter;
       const matchesBilling = billingFilter === "all" || sub.billingCycle === billingFilter;
-      return matchesSearch && matchesPlan && matchesStatus && matchesBilling;
+
+      return matchesSearch && matchesPlan && matchesStatus && matchesBilling && matchesCompanyId;
     });
-  }, [billingFilter, formattedSubscriptions, planFilter, searchQuery, statusFilter]);
+  }, [billingFilter, companyIdFilter, formattedSubscriptions, planFilter, searchQuery, statusFilter]);
+
+  const handleChangePlan = async () => {
+    if (!selectedSubscription || !newPlanId) return;
+
+    try {
+      await updateMutation.mutateAsync({
+        id: selectedSubscription.id,
+        planId: newPlanId,
+      });
+      setIsChangePlanOpen(false);
+      setSelectedSubscription(null);
+    } catch (error) {
+      // toast is handled in hook
+    }
+  };
 
   const activeSubscriptions = formattedSubscriptions.filter((sub) => sub.uiStatus === "active");
   const monthlyRecurringRevenue = activeSubscriptions.reduce((total, sub) => {
@@ -248,17 +301,24 @@ export default function Subscriptions() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>View Details</DropdownMenuItem>
-                          <DropdownMenuItem>Change Plan</DropdownMenuItem>
-                          <DropdownMenuItem>Update Payment</DropdownMenuItem>
-                          <DropdownMenuItem>View Invoices</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedSubscription(sub);
+                            setIsViewOpen(true);
+                          }}>View Details</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedSubscription(sub);
+                            setNewPlanId(sub.planId);
+                            setIsChangePlanOpen(true);
+                          }}>Change Plan</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/superadmin/transactions?companyId=${sub.companyId}`)}>
+                            View Invoices
+                          </DropdownMenuItem>
                           {sub.uiStatus !== "cancelled" && (
                             <DropdownMenuItem
                               className="text-destructive"
                               onClick={() => {
-                                if (window.confirm("Are you sure you want to cancel this subscription?")) {
-                                  cancelMutation.mutate(sub.companyId);
-                                }
+                                setSelectedSubscription(sub);
+                                setIsCancelOpen(true);
                               }}
                             >
                               Cancel Subscription
@@ -273,6 +333,126 @@ export default function Subscriptions() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* View Details Dialog */}
+        <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Subscription Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4 text-sm">
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Subscription ID</span>
+                <span className="font-mono">{selectedSubscription?.id}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Company</span>
+                <span>{selectedSubscription?.company}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Plan</span>
+                <span>{selectedSubscription?.plan}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Billing Cycle</span>
+                <span className="capitalize">{selectedSubscription?.billingCycle}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Amount</span>
+                <span>${selectedSubscription?.amount}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Seats</span>
+                <span>{selectedSubscription?.seatsUsed} / {selectedSubscription?.seatsAllowed}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Status</span>
+                <Badge variant="secondary" className={getStatusBadge(selectedSubscription?.uiStatus ?? "")}>
+                  {selectedSubscription?.uiStatus?.replace("_", " ")}
+                </Badge>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Next Billing</span>
+                <span>{selectedSubscription?.nextBilling}</span>
+              </div>
+              <div className="flex justify-end mt-6">
+                <Button variant="outline" onClick={() => setIsViewOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Change Plan Dialog */}
+        <Dialog open={isChangePlanOpen} onOpenChange={setIsChangePlanOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Change Subscription Plan</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Current Plan</Label>
+                <div className="p-3 bg-muted rounded-md font-medium">
+                  {selectedSubscription?.plan} (${selectedSubscription?.amount}/{selectedSubscription?.billingCycle})
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="plan-select">New Plan</Label>
+                <Select value={newPlanId} onValueChange={setNewPlanId}>
+                  <SelectTrigger id="plan-select">
+                    <SelectValue placeholder="Select a new plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.name} - ${selectedSubscription?.billingCycle === 'yearly' ? plan.pricePerYear : plan.pricePerMonth}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button variant="outline" onClick={() => setIsChangePlanOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  className="gradient-primary text-primary-foreground"
+                  onClick={handleChangePlan}
+                  disabled={updateMutation.isPending}
+                >
+                  Confirm Change
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Cancel Subscription Alert Dialog */}
+        <AlertDialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will cancel the subscription for <strong>{selectedSubscription?.company}</strong>.
+                They will lose access to premium features once the current period ends.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Go Back</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (selectedSubscription) {
+                    cancelMutation.mutate(selectedSubscription.companyId);
+                  }
+                }}
+              >
+                Confirm Cancellation
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

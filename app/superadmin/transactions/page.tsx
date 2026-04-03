@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { StatsCard } from "@/components/superadmin/stats-card";
 import { useSuperadminTransactions } from "@/lib/hooks";
+import { formatDate } from "@/lib/utils";
 
 interface Transaction {
   id: string;
@@ -229,8 +230,8 @@ export default function Transactions() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{txn.method}</TableCell>
-                    <TableCell className="text-muted-foreground">{txn.date}</TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-sm">{txn.method}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(txn.date)}</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className={getStatusBadge(txn.status)}>
                         {txn.status}

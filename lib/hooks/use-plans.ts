@@ -25,20 +25,16 @@ export function usePlans() {
 }
 
 export function useSubscribeToPlan() {
-    const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: async ({ planId, period }: { planId: string; period: 'monthly' | 'yearly' }) => {
-            return api.post<{
-                success: boolean;
-                message: string;
-                company: any;
+            const response = await api.post<{
+                url: string;
             }>('/auth/subscription/upgrade', { planName: planId, period });
-        },
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ['auth', 'subscription'] });
-            queryClient.invalidateQueries({ queryKey: ['auth', 'company-stats'] });
-            toast.success(data.message);
+
+            if (response.url) {
+                window.location.href = response.url;
+            }
+            return response;
         },
         onError: (error) => {
             toast.error(getErrorMessage(error));

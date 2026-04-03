@@ -14,8 +14,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Loader2, Building2, User, AlertCircle, Sparkles } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { usePlatformSettings } from "@/lib/hooks/use-platform-settings"
 
 export default function RegisterPage() {
+  const { data: settings } = usePlatformSettings()
   const [error, setError] = useState("")
   const [registerType, setRegisterType] = useState<"company" | "user">("company")
   const [formData, setFormData] = useState({
@@ -100,9 +102,13 @@ export default function RegisterPage() {
       <header className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">WF</span>
+            <span className="text-primary-foreground font-bold text-sm">
+              {settings?.platformName?.charAt(0) || "W"}F
+            </span>
           </div>
-          <span className="font-semibold text-foreground">WorkFlow Pro</span>
+          <span className="font-semibold text-foreground">
+            {settings?.platformName || "WorkFlow Pro"}
+          </span>
         </div>
         <ThemeToggle />
       </header>
@@ -139,7 +145,9 @@ export default function RegisterPage() {
                 <TabsContent value="company" className="space-y-4 mt-0">
                   <div className="p-3 rounded-lg bg-chart-2/10 border border-chart-2/20 flex items-center gap-2 text-sm">
                     <Sparkles className="h-4 w-4 text-chart-2" />
-                    <span className="text-chart-2 font-medium">3 days free trial included!</span>
+                    <span className="text-chart-2 font-medium">
+                      {settings?.trialDays || 3} days free trial included!
+                    </span>
                   </div>
 
                   <div className="space-y-2">

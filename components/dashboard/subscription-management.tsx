@@ -1,36 +1,118 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Check, CreditCard, Users, Zap } from "lucide-react"
-import { useSubscriptionStatus, useCompanyUserStats } from "@/lib/hooks/use-auth"
+import { Check, CreditCard, Users, Zap, Loader2 } from "lucide-react"
+import { useSubscriptionStatus, useCompanyUserStats, authKeys } from "@/lib/hooks/use-auth"
 import { usePlans, useSubscribeToPlan } from "@/lib/hooks/use-plans"
 import { useAuthStore } from "@/lib/stores/auth-store"
+import { formatCurrency } from "@/lib/utils"
+import { usePlatformSettings } from "@/lib/hooks/use-platform-settings"
+import { api } from "@/lib/api/request"
+import { toast } from "sonner"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export function SubscriptionManagement() {
-    const { company } = useAuthStore()
+    const { company, setCompany, setSubscription } = useAuthStore()
+    const { data: settings } = usePlatformSettings()
     const { data: plans, isLoading: plansLoading } = usePlans()
     const { data: subscription } = useSubscriptionStatus()
     const { data: userStats } = useCompanyUserStats()
     const subscribeMutation = useSubscribeToPlan()
+    const queryClient = useQueryClient()
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const hasHandledSuccess = useRef(false)
 
     const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly")
+    const [confirmPlanId, setConfirmPlanId] = useState<string | null>(null)
+    const [isVerifying, setIsVerifying] = useState(false)
 
-    const currentPlanName = company?.subscriptionPlan || subscription?.status || "TRIAL"
+    // Handle Stripe redirect — verify payment and activate subscription
+    useEffect(() => {
+        const status = searchParams.get("status")
+        const sessionId = searchParams.get("session_id")
+
+        if (status === "success" && sessionId && !hasHandledSuccess.current) {
+            hasHandledSuccess.current = true
+            setIsVerifying(true)
+
+            const verifyAndActivate = async () => {
+                try {
+                    // Call backend to verify the Stripe session and upgrade the plan
+                    await api.post("/auth/subscription/verify-payment", { sessionId })
+
+                    // Refetch subscription status from backend
+                    const freshSubscription = await api.get<any>("/auth/subscription-status")
+                    setSubscription(freshSubscription)
+
+                    // Refetch company profile to get updated subscriptionPlan
+                    const freshProfile = await api.get<any>("/auth/me")
+                    if (freshProfile?.company) {
+                        setCompany(freshProfile.company)
+                    }
+
+                    // Invalidate all related queries so the UI re-renders with fresh data
+                    await queryClient.invalidateQueries({ queryKey: authKeys.subscription() })
+                    await queryClient.invalidateQueries({ queryKey: authKeys.all })
+
+                    toast.success("Payment successful! Your plan has been upgraded.")
+                } catch (error) {
+                    console.error("Failed to verify payment:", error)
+                    toast.error("Payment verification failed. Please contact support if you were charged.")
+                } finally {
+                    setIsVerifying(false)
+                    // Clean up URL params so a page refresh doesn't re-trigger
+                    router.replace("/dashboard/subscription", { scroll: false })
+                }
+            }
+
+            verifyAndActivate()
+        }
+    }, [searchParams, queryClient, setSubscription, setCompany, router])
+
+    const isTrial = subscription?.status === "TRIAL"
+    const currentPlanName = isTrial ? "Free Trial" : (company?.subscriptionPlan || "Starter")
 
     const handleUpgrade = (planId: string) => {
-        if (window.confirm("Are you sure you want to change your subscription?")) {
-            subscribeMutation.mutate({ planId, period: billingCycle })
+        setConfirmPlanId(planId)
+    }
+
+    const onConfirmUpgrade = () => {
+        if (confirmPlanId) {
+            subscribeMutation.mutate({ planId: confirmPlanId, period: billingCycle })
+            setConfirmPlanId(null)
         }
     }
 
+    if (isVerifying) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-lg font-medium">Verifying your payment...</p>
+                <p className="text-sm text-muted-foreground">Please wait while we activate your subscription.</p>
+            </div>
+        )
+    }
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 px-1">
             {/* Current Plan Overview */}
             <Card>
                 <CardHeader>
@@ -119,7 +201,10 @@ export function SubscriptionManagement() {
                                         <CardTitle className="text-2xl">{plan.name}</CardTitle>
                                         <div className="flex items-baseline gap-1">
                                             <span className="text-3xl font-bold">
-                                                ${billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
+                                                {formatCurrency(
+                                                    billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice,
+                                                    settings?.defaultCurrency || 'USD'
+                                                )}
                                             </span>
                                             <span className="text-muted-foreground">
                                                 /{billingCycle === "monthly" ? "month" : "year"}
@@ -165,6 +250,23 @@ export function SubscriptionManagement() {
                     </div>
                 )}
             </div>
+
+            <AlertDialog open={!!confirmPlanId} onOpenChange={(open) => !open && setConfirmPlanId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Change Subscription?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to change your subscription plan? You will be redirected to Stripe to complete the payment.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={onConfirmUpgrade}>
+                            Continue to Payment
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }

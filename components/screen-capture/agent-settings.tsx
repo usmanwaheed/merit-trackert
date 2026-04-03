@@ -9,6 +9,7 @@ import {
     useDeleteAgent,
     useAgentDownloadInfo,
 } from "@/lib/hooks/use-desktop-agent"
+import { usePlatformSettings } from "@/lib/hooks/use-platform-settings"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -55,6 +56,7 @@ import type { DesktopAgent, Platform } from "@/lib/types/screen-capture"
 import { DownloadDialog } from "./agent-install-banner"
 
 export function AgentSettings() {
+    const { data: settings } = usePlatformSettings()
     const [selectedAgent, setSelectedAgent] = useState<DesktopAgent | null>(null)
     const [isDeactivateOpen, setIsDeactivateOpen] = useState(false)
     const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -338,7 +340,7 @@ export function AgentSettings() {
                                 onClick={() => setIsDownloadOpen(true)}
                             >
                                 <Download className="h-4 w-4 mr-2" />
-                                Download Desktop App
+                                Download {settings?.platformName || "Merit Tracker"} Desktop
                             </Button>
                         </div>
                     )}

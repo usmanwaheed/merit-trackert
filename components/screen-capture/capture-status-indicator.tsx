@@ -2,6 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePlatformSettings } from "@/lib/hooks/use-platform-settings"
 import { Badge } from "@/components/ui/badge"
 import {
     Tooltip,
@@ -25,6 +26,7 @@ export function CaptureStatusIndicator({
     nextCaptureIn,
     className,
 }: CaptureStatusIndicatorProps) {
+    const { data: settings } = usePlatformSettings()
     const [countdown, setCountdown] = useState(nextCaptureIn)
     const [pulseColor, setPulseColor] = useState("bg-green-500")
 
@@ -76,7 +78,7 @@ export function CaptureStatusIndicator({
                     <TooltipContent>
                         <p>Desktop agent is offline. Screenshots are not being captured.</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                            Please ensure the Merit Tracker app is running.
+                            Please ensure the {settings?.platformName || "Merit Tracker"} app is running.
                         </p>
                     </TooltipContent>
                 </Tooltip>

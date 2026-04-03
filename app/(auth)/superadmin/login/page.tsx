@@ -14,9 +14,11 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, ShieldCheck, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { usePlatformSettings } from "@/lib/hooks/use-platform-settings"
 import { toast } from "sonner"
 
 export default function SuperadminLoginPage() {
+  const { data: settings } = usePlatformSettings()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
@@ -39,9 +41,13 @@ export default function SuperadminLoginPage() {
       <header className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">WF</span>
+            <span className="text-primary-foreground font-bold text-sm">
+              {settings?.platformName?.charAt(0) || "W"}F
+            </span>
           </div>
-          <span className="font-semibold text-foreground">WorkFlow Pro</span>
+          <span className="font-semibold text-foreground">
+            {settings?.platformName || "WorkFlow Pro"}
+          </span>
         </div>
         <ThemeToggle />
       </header>

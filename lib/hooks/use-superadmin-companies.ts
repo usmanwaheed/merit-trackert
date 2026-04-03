@@ -47,8 +47,31 @@ export function useCreateSuperadminCompany() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (payload: { name: string; email: string; plan: string; maxUsers?: number }) =>
+        mutationFn: (payload: { name: string; adminEmail: string; plan: string }) =>
             superadminApi.post<SuperadminCompany>('/superadmin/companies', payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: superadminCompaniesKeys.all });
+        },
+    });
+}
+
+export function useUpdateSuperadminCompany() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, ...payload }: Partial<SuperadminCompany> & { id: string }) =>
+            superadminApi.patch<SuperadminCompany>(`/superadmin/companies/${id}`, payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: superadminCompaniesKeys.all });
+        },
+    });
+}
+
+export function useDeleteSuperadminCompany() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => superadminApi.delete(`/superadmin/companies/${id}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: superadminCompaniesKeys.all });
         },

@@ -3,6 +3,7 @@
 
 import { QueryProvider } from './query-provider';
 import { Toaster } from 'sonner';
+import { DynamicBranding } from '@/components/dynamic-branding';
 
 interface ProvidersProps {
     children: React.ReactNode;
@@ -11,6 +12,7 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
     return (
         <QueryProvider>
+            <DynamicBranding />
             {children}
             <Toaster position="top-right" richColors />
         </QueryProvider>

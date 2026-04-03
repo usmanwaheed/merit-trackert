@@ -14,6 +14,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -28,13 +38,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/api/request";
 import {
   useCreateSuperadminCompany,
   useSuperadminCompanies,
   useSuperadminPlans,
+  useUpdateSuperadminCompany,
 } from "@/lib/hooks";
+import { useRouter } from "next/navigation";
 
 interface Company {
   id: string;
@@ -69,6 +82,13 @@ export default function Companies() {
   const { data: companiesData } = useSuperadminCompanies();
   const { data: plansData } = useSuperadminPlans();
   const createCompanyMutation = useCreateSuperadminCompany();
+  const updateCompanyMutation = useUpdateSuperadminCompany();
+  const router = useRouter();
+
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isSuspendOpen, setIsSuspendOpen] = useState(false);
   const companies = companiesData ?? [];
   const plans = plansData ?? [];
 
@@ -92,15 +112,62 @@ export default function Companies() {
     try {
       const newCompany = await createCompanyMutation.mutateAsync({
         name: companyName,
-        email: companyEmail,
-        plan: selectedPlan?.name ?? "Starter",
-        maxUsers: selectedPlan?.maxUsers,
+        adminEmail: companyEmail,
+        plan: (selectedPlan?.name ?? "starter").toLowerCase(),
       });
       setIsCreateOpen(false);
       setCompanyName("");
       setCompanyEmail("");
       setPlanName(null);
       toast.success(`Added ${newCompany.name}.`);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
+
+  const handleEditCompany = (company: Company) => {
+    setEditingCompany(company);
+    setCompanyName(company.name);
+    setCompanyEmail(company.email);
+    setPlanName(company.plan);
+    setIsEditOpen(true);
+  };
+
+  const handleUpdateCompany = async () => {
+    if (!editingCompany) return;
+
+    try {
+      await updateCompanyMutation.mutateAsync({
+        id: editingCompany.id,
+        name: companyName,
+        email: companyEmail,
+        plan: planName ?? editingCompany.plan,
+      });
+      setIsEditOpen(false);
+      setEditingCompany(null);
+      toast.success("Company updated successfully.");
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
+
+  const handleSuspendCompany = (company: Company) => {
+    setEditingCompany(company);
+    setIsSuspendOpen(true);
+  };
+
+  const confirmSuspendCompany = async () => {
+    if (!editingCompany) return;
+
+    const isSuspended = editingCompany.status === "suspended";
+    try {
+      await updateCompanyMutation.mutateAsync({
+        id: editingCompany.id,
+        status: isSuspended ? "active" : "suspended",
+      });
+      setIsSuspendOpen(false);
+      setEditingCompany(null);
+      toast.success(`Company ${isSuspended ? "activated" : "suspended"} successfully.`);
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -156,7 +223,7 @@ export default function Companies() {
                     <SelectContent>
                       {plans.map((plan) => (
                         <SelectItem key={plan.id} value={plan.name}>
-                          {plan.name} ({plan.maxUsers} users)
+                          {plan.name} ({plan.userLimit} users)
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -167,6 +234,7 @@ export default function Companies() {
                     Cancel
                   </Button>
                   <Button
+                    variant="outline"
                     className="gradient-primary text-primary-foreground"
                     onClick={createCompany}
                     disabled={createCompanyMutation.isPending}
@@ -251,11 +319,19 @@ export default function Companies() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View Details</DropdownMenuItem>
-                      <DropdownMenuItem>Edit Company</DropdownMenuItem>
-                      <DropdownMenuItem>Manage Subscription</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
-                        Suspend Company
+                      <DropdownMenuItem onClick={() => {
+                        setEditingCompany(company);
+                        setIsViewOpen(true);
+                      }}>View Details</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditCompany(company)}>Edit Company</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push(`/superadmin/subscriptions?companyId=${company.id}`)}>
+                        Manage Subscription
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className={company.status === "suspended" ? "text-success" : "text-destructive"}
+                        onClick={() => handleSuspendCompany(company)}
+                      >
+                        {company.status === "suspended" ? "Activate Company" : "Suspend Company"}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -272,7 +348,7 @@ export default function Companies() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4" />
-                  Joined {company.createdAt}
+                  Joined {formatDate(company.createdAt)}
                 </div>
                 <div className="pt-3 border-t border-border">
                   <div className="flex items-center justify-between">
@@ -296,6 +372,127 @@ export default function Companies() {
             </Card>
           ))}
         </div>
+
+        {/* Edit Company Dialog */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Company</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-company-name">Company Name</Label>
+                <Input
+                  id="edit-company-name"
+                  placeholder="Enter company name"
+                  value={companyName}
+                  onChange={(event) => setCompanyName(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-company-email">Admin Email</Label>
+                <Input
+                  id="edit-company-email"
+                  type="email"
+                  placeholder="admin@company.com"
+                  value={companyEmail}
+                  onChange={(event) => setCompanyEmail(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-company-plan">Select Plan</Label>
+                <Select value={planName ?? undefined} onValueChange={setPlanName}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.name}>
+                        {plan.name} ({plan.userLimit} users)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  className="gradient-primary text-primary-foreground"
+                  onClick={handleUpdateCompany}
+                  disabled={updateCompanyMutation.isPending}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Details Dialog */}
+        <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Company Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4 text-sm">
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Company Name</span>
+                <span>{editingCompany?.name}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Admin Email</span>
+                <span>{editingCompany?.email}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Current Plan</span>
+                <span>{editingCompany?.plan}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Status</span>
+                <Badge variant="secondary" className="capitalize">{editingCompany?.status}</Badge>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Users</span>
+                <span>{editingCompany?.users} / {editingCompany?.maxUsers}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-medium">Joined</span>
+                <span>{formatDate(editingCompany?.createdAt)}</span>
+              </div>
+              <div className="flex justify-end mt-6">
+                <Button variant="outline" onClick={() => setIsViewOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Suspend/Activate Alert Dialog */}
+        <AlertDialog open={isSuspendOpen} onOpenChange={setIsSuspendOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {editingCompany?.status === "suspended" ? "Activate" : "Suspend"} Company?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to {editingCompany?.status === "suspended" ? "activate" : "suspend"} <strong>{editingCompany?.name}</strong>?
+                {editingCompany?.status !== "suspended" && " This will restrict their access to the platform."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setEditingCompany(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className={editingCompany?.status === "suspended" ? "bg-success text-success-foreground hover:bg-success/90" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
+                onClick={confirmSuspendCompany}
+              >
+                Confirm {editingCompany?.status === "suspended" ? "Activation" : "Suspension"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

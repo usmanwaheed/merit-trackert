@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Providers } from '@/lib/providers';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
+import { DynamicBranding } from '@/components/dynamic-branding';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,7 +26,9 @@ export default function RootLayout({
 
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            <Providers>{children}</Providers>
+            <Providers>
+              {children}
+            </Providers>
           </AuthProvider>
         </ThemeProvider>
       </body>

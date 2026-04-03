@@ -54,3 +54,19 @@ export function useCancelSubscription() {
         },
     });
 }
+
+export function useUpdateSubscription() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, ...payload }: { id: string; planId?: string; status?: string; period?: string }) =>
+            superadminApi.patch<SuperadminSubscription>(`/superadmin/subscriptions/${id}`, payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: superadminSubscriptionsKeys.all });
+            toast.success('Subscription updated successfully');
+        },
+        onError: (error: any) => {
+            toast.error(error?.response?.data?.message || 'Failed to update subscription');
+        },
+    });
+}

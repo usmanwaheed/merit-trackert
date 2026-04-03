@@ -9,6 +9,7 @@ export interface SuperadminPlan {
     monthlyPrice: number;
     yearlyPrice: number;
     userLimit: number;
+    storageLimit: number;
     features: string[];
     isPopular: boolean;
     isActive: boolean;
@@ -21,6 +22,7 @@ export interface CreatePlanDto {
     monthlyPrice: number;
     yearlyPrice: number;
     userLimit: number;
+    storageLimit?: number;
     features: string[];
     isPopular?: boolean;
     isActive?: boolean;

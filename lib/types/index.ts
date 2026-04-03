@@ -91,6 +91,8 @@ export interface AuthCompany {
     logo?: string | null;
     companyCode: string;
     screenCaptureEnabled?: boolean;
+    subscriptionPlan?: string;
+    subscriptionStatus?: SubscriptionStatus;
 }
 
 export interface SubscriptionInfo {

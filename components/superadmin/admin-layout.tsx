@@ -17,8 +17,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useState } from "react"
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSuperadminLogout } from "@/lib/hooks/use-superadmin-auth";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { usePlatformSettings } from "@/lib/hooks/use-platform-settings";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -36,8 +40,10 @@ const navItems = [
 ];
 
 export function AdminLayout({ children }: AdminLayoutProps) {
+  const { data: settings } = usePlatformSettings();
   const pathname = usePathname();
   const logoutMutation = useSuperadminLogout();
+  const [collapsed, setCollapsed] = useState(false)
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -45,14 +51,22 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <aside className="hidden lg:flex w-64 border-r border-border bg-card flex-col">
+      <aside
+        className={cn(
+          "flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300",
+          collapsed ? "w-16" : "w-64",
+        )}
+      >
         <div className="h-16 px-6 flex items-center gap-2 border-b border-border">
-          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold">
-            SA
+          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold overflow-hidden">
+            {settings?.logoUrl ? (
+              <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              settings?.platformName?.charAt(0) || "S"
+            )}
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Superadmin</p>
-            <p className="font-semibold text-foreground">Merit Tracker</p>
+            <p className="font-semibold text-foreground">{settings?.platformName || "Merit Tracker"}</p>
           </div>
         </div>
         <ScrollArea className="flex-1">
@@ -65,10 +79,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <Link key={item.href} href={item.href} className="block">
                   <div
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover-lift",
                       isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -79,42 +93,42 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             })}
           </nav>
         </ScrollArea>
-        <div className="p-4 border-t border-border">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-sm font-medium text-foreground">Need help?</p>
-              <p className="text-xs text-muted-foreground">Contact support</p>
-            </div>
-            <Button variant="outline" size="sm">
-              Support
-            </Button>
+        <div className="p-4 border-t border-sidebar-border space-y-3">
+          <div className={`flex items-center justify-between ${collapsed ? "flex-col" : ""} gap-2`}>
+            <ThemeToggle />
+            {!collapsed && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                disabled={logoutMutation.isPending}
+                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            )}
+            {collapsed && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    disabled={logoutMutation.isPending}
+                    className="h-9 w-9 hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Logout</TooltipContent>
+              </Tooltip>
+            )}
           </div>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            onClick={() => handleLogout()}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b border-border px-4 lg:px-6 flex items-center justify-between bg-card/60 backdrop-blur">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="lg:hidden" asChild>
-              <Link href="/superadmin/dashboard">Menu</Link>
-            </Button>
-            <div>
-              <p className="text-xs text-muted-foreground">Superadmin Panel</p>
-              <p className="font-semibold text-foreground">Merit Tracker</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-          </div>
-        </header>
         <main className="flex-1 p-4 lg:p-6 bg-muted/20 min-h-0">{children}</main>
       </div>
     </div>

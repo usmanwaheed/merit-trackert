@@ -3,6 +3,7 @@
 
 import { useState } from "react"
 import { useAgentCheckInstalled, useAgentDownloadInfo } from "@/lib/hooks/use-desktop-agent"
+import { usePlatformSettings } from "@/lib/hooks/use-platform-settings"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -32,6 +33,7 @@ interface AgentInstallBannerProps {
 }
 
 export function AgentInstallBanner({ showWhenInstalled = false, compact = false }: AgentInstallBannerProps) {
+    const { data: settings } = usePlatformSettings()
     const [isDownloadOpen, setIsDownloadOpen] = useState(false)
     const { data: agentStatus, isLoading } = useAgentCheckInstalled()
     const { data: downloadInfo } = useAgentDownloadInfo()
@@ -41,7 +43,7 @@ export function AgentInstallBanner({ showWhenInstalled = false, compact = false 
     }
 
     // Agent is installed and online
-    if (agentStatus?.installed && agentStatus?.hasOnlineAgent) {
+    if (agentStatus?.installed && agentStatus?.online) {
         if (!showWhenInstalled) return null
 
         return (
@@ -63,7 +65,7 @@ export function AgentInstallBanner({ showWhenInstalled = false, compact = false 
     }
 
     // Agent installed but offline
-    if (agentStatus?.installed && !agentStatus?.hasOnlineAgent) {
+    if (agentStatus?.installed && !agentStatus?.online) {
         return (
             <Alert className="border-yellow-500/50 bg-yellow-500/10">
                 <WifiOff className="h-4 w-4 text-yellow-500" />
@@ -71,7 +73,7 @@ export function AgentInstallBanner({ showWhenInstalled = false, compact = false 
                     Desktop Agent Offline
                 </AlertTitle>
                 <AlertDescription className="text-yellow-600 dark:text-yellow-300">
-                    Your desktop agent is installed but not running. Please start the Merit Tracker Desktop app to enable screen capture.
+                    Your desktop agent is installed but not running. Please start the {settings?.platformName || "Merit Tracker"} Desktop app to enable screen capture.
                 </AlertDescription>
             </Alert>
         )
@@ -102,7 +104,7 @@ export function AgentInstallBanner({ showWhenInstalled = false, compact = false 
                 <AlertDescription className="text-blue-600 dark:text-blue-300">
                     <p className="mb-3">
                         Some projects require screen monitoring during time tracking.
-                        Install the Merit Tracker Desktop app to enable this feature.
+                        Install the {settings?.platformName || "Merit Tracker"} Desktop app to enable this feature.
                     </p>
                     <Button
                         size="sm"
@@ -118,6 +120,7 @@ export function AgentInstallBanner({ showWhenInstalled = false, compact = false 
             <DownloadDialog
                 open={isDownloadOpen}
                 onOpenChange={setIsDownloadOpen}
+                settings={settings}
                 downloadInfo={downloadInfo}
             />
         </>
@@ -128,18 +131,11 @@ export function AgentInstallBanner({ showWhenInstalled = false, compact = false 
 interface DownloadDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    downloadInfo?: Array<{
-        platform: string;
-        version: string;
-        downloadUrl: string;
-        releaseDate: string;
-        fileSize: number;
-        checksum: string;
-        releaseNotes: string;
-    }>;
+    settings?: any;
+    downloadInfo?: any;
 }
 
-function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProps) {
+function DownloadDialog({ open, onOpenChange, settings, downloadInfo }: DownloadDialogProps) {
     const [downloading, setDownloading] = useState<string | null>(null)
 
     const handleDownload = (downloadUrl: string, platform: string) => {
@@ -166,16 +162,21 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
     }
 
     // Helper function to format file size
-    const formatFileSize = (bytes: number) => {
+    const formatFileSize = (bytes?: number) => {
+        if (!bytes) return "Unknown size"
         const mb = bytes / (1024 * 1024)
         return `~${Math.round(mb)} MB`
     }
 
-    // Find platform info from downloadInfo array
-    const getPlatformInfo = (platformName: string) => {
-        return downloadInfo?.find(
-            info => info.platform.toUpperCase() === platformName.toUpperCase()
-        )
+    // Find platform info
+    const getPlatformDownloadUrl = (platformId: string) => {
+        if (!downloadInfo) return null;
+        switch (platformId) {
+            case 'WINDOWS': return downloadInfo.windows;
+            case 'MAC': return downloadInfo.mac;
+            case 'LINUX': return downloadInfo.linux;
+            default: return null;
+        }
     }
 
     const platforms = [
@@ -208,7 +209,7 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Monitor className="h-5 w-5" />
-                        Download Merit Tracker Desktop
+                        Download {settings?.platformName || "Merit Tracker"} Desktop
                     </DialogTitle>
                     <DialogDescription>
                         Install the desktop agent to enable screen capture during time tracking.
@@ -220,15 +221,15 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
                     {platforms.map((platform) => {
                         const Icon = platform.icon
                         const isDownloading = downloading === platform.id
-                        const platformInfo = getPlatformInfo(platform.id)
+                        const downloadUrl = getPlatformDownloadUrl(platform.id)
 
                         return (
                             <Card
                                 key={platform.id}
                                 className="cursor-pointer hover:border-primary transition-colors"
                                 onClick={() => {
-                                    if (platformInfo?.downloadUrl) {
-                                        handleDownload(platformInfo.downloadUrl, platform.id)
+                                    if (downloadUrl) {
+                                        handleDownload(downloadUrl, platform.id)
                                     }
                                 }}
                             >
@@ -240,19 +241,14 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
                                     <p className="text-xs text-muted-foreground mt-1">
                                         {platform.description}
                                     </p>
-                                    {platformInfo && (
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {formatFileSize(platformInfo.fileSize)}
-                                        </p>
-                                    )}
                                     <Button
                                         size="sm"
                                         className="mt-3 w-full gap-2"
-                                        disabled={isDownloading || !platformInfo?.downloadUrl}
+                                        disabled={isDownloading || !downloadUrl}
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            if (platformInfo?.downloadUrl) {
-                                                handleDownload(platformInfo.downloadUrl, platform.id)
+                                            if (downloadUrl) {
+                                                handleDownload(downloadUrl, platform.id)
                                             }
                                         }}
                                     >
@@ -275,8 +271,8 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
-                    <span>Version {currentVersion}</span>
-                    {downloadInfo?.[0]?.releaseNotes && (
+                    <span>Version {downloadInfo?.version || '1.0.0'}</span>
+                    {downloadInfo?.releaseNotes && (
                         <Button variant="link" size="sm" className="gap-1 p-0 h-auto">
                             Release Notes
                             <ExternalLink className="h-3 w-3" />
@@ -291,7 +287,7 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
                     </h4>
                     <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
                         <li>Run the installer and follow the setup wizard</li>
-                        <li>Sign in with your Merit Tracker account</li>
+                        <li>Sign in with your {settings?.platformName || "Merit Tracker"} account</li>
                         <li>The app will run in your system tray</li>
                         <li>Screen capture will automatically start when you track time</li>
                     </ol>

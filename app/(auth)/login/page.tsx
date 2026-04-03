@@ -15,8 +15,10 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, Building2, User, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { usePlatformSettings } from "@/lib/hooks/use-platform-settings"
 
 export default function LoginPage() {
+  const { data: settings } = usePlatformSettings()
   const [loginType, setLoginType] = useState<"company" | "user">("company")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -48,9 +50,13 @@ export default function LoginPage() {
       <header className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">MT</span>
+            <span className="text-primary-foreground font-bold text-sm">
+              {settings?.platformName?.charAt(0) || "M"}T
+            </span>
           </div>
-          <span className="font-semibold text-foreground">Merit-Tracker</span>
+          <span className="font-semibold text-foreground">
+            {settings?.platformName || "Merit-Tracker"}
+          </span>
         </div>
         <ThemeToggle />
       </header>
@@ -63,12 +69,14 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <Tabs value={loginType} onValueChange={(v) => setLoginType(v as "company" | "user")}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="company" className="flex items-center gap-2 hover-lift  cursor-pointer border-sidebar-border">
+              <TabsList className="grid w-full grid-cols-2 mb-6 gap-1">
+                <TabsTrigger value="company"
+                  className="flex items-center gap-2 hover-lift  cursor-pointer border-sidebar-border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary"
+                >
                   <Building2 className="h-4 w-4" />
                   Company
                 </TabsTrigger>
-                <TabsTrigger value="user" className="flex items-center gap-2 hover-lift cursor-pointer border-sidebar-border">
+                <TabsTrigger value="user" className="flex items-center gap-2 hover-lift cursor-pointer border-sidebar-border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary">
                   <User className="h-4 w-4" />
                   User
                 </TabsTrigger>
