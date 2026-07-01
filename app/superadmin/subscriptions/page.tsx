@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { Search, MoreHorizontal, Calendar, CreditCard, RefreshCw, XCircle } from "lucide-react";
 import { AdminLayout } from "@/components/superadmin/admin-layout";
 import { Button } from "@/components/ui/button";
@@ -85,6 +85,14 @@ function getStatusBadge(status: string) {
 }
 
 export default function Subscriptions() {
+  return (
+    <Suspense fallback={null}>
+      <SubscriptionsContent />
+    </Suspense>
+  );
+}
+
+function SubscriptionsContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const { data } = useSuperadminSubscriptionsData();
   const subscriptions = data?.subscriptions ?? [];
