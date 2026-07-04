@@ -3,6 +3,7 @@
 
 import { useState } from "react"
 import { useAgentCheckInstalled, useAgentDownloadInfo } from "@/lib/hooks/use-desktop-agent"
+import type { AgentDownloadInfo } from "@/lib/types/screen-capture"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -128,15 +129,7 @@ export function AgentInstallBanner({ showWhenInstalled = false, compact = false 
 interface DownloadDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    downloadInfo?: Array<{
-        platform: string;
-        version: string;
-        downloadUrl: string;
-        releaseDate: string;
-        fileSize: number;
-        checksum: string;
-        releaseNotes: string;
-    }>;
+    downloadInfo?: AgentDownloadInfo;
 }
 
 function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProps) {
@@ -151,14 +144,18 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
         console.log('Downloading:', downloadUrl)
         setDownloading(platform)
 
-        // Create a temporary anchor element to trigger download
         const link = document.createElement('a')
         link.href = downloadUrl
-        link.download = '' // This will use the filename from the URL
+        link.rel = 'noopener noreferrer'
         link.target = '_blank'
+        link.style.display = 'none'
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
+
+        if (typeof window !== 'undefined') {
+            window.open(downloadUrl, '_blank', 'noopener,noreferrer')
+        }
 
         setTimeout(() => {
             setDownloading(null)
@@ -171,10 +168,23 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
         return `~${Math.round(mb)} MB`
     }
 
-    // Find platform info from downloadInfo array
+    const normalizedDownloadInfo = (Array.isArray(downloadInfo)
+        ? downloadInfo.map((item) => ({
+            platform: item.platform,
+            version: item.version,
+            downloadUrl: item.downloadUrl,
+            releaseNotes: item.releaseNotes,
+            fileSize: item.fileSize,
+        }))
+        : [
+            downloadInfo?.windows ? { platform: 'WINDOWS', downloadUrl: downloadInfo.windows, version: downloadInfo.version || '1.0.0', releaseNotes: downloadInfo.releaseNotes ?? '', fileSize: undefined as number | undefined } : null,
+            downloadInfo?.mac ? { platform: 'MAC', downloadUrl: downloadInfo.mac, version: downloadInfo.version || '1.0.0', releaseNotes: downloadInfo.releaseNotes ?? '', fileSize: undefined as number | undefined } : null,
+            downloadInfo?.linux ? { platform: 'LINUX', downloadUrl: downloadInfo.linux, version: downloadInfo.version || '1.0.0', releaseNotes: downloadInfo.releaseNotes ?? '', fileSize: undefined as number | undefined } : null,
+        ].filter((item): item is { platform: string; version: string; downloadUrl: string; releaseNotes: string; fileSize: number | undefined } => item !== null))
+
     const getPlatformInfo = (platformName: string) => {
-        return downloadInfo?.find(
-            info => info.platform.toUpperCase() === platformName.toUpperCase()
+        return normalizedDownloadInfo.find(
+            (info) => info?.platform.toUpperCase() === platformName.toUpperCase()
         )
     }
 
@@ -199,8 +209,7 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
         },
     ]
 
-    // Get the current version from the first available download
-    const currentVersion = downloadInfo?.[0]?.version || '1.0.0'
+    const currentVersion = normalizedDownloadInfo[0]?.version || '1.0.0'
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -240,7 +249,7 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
                                     <p className="text-xs text-muted-foreground mt-1">
                                         {platform.description}
                                     </p>
-                                    {platformInfo && (
+                                    {platformInfo && typeof platformInfo.fileSize === 'number' && (
                                         <p className="text-xs text-muted-foreground mt-1">
                                             {formatFileSize(platformInfo.fileSize)}
                                         </p>
@@ -276,7 +285,7 @@ function DownloadDialog({ open, onOpenChange, downloadInfo }: DownloadDialogProp
 
                 <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
                     <span>Version {currentVersion}</span>
-                    {downloadInfo?.[0]?.releaseNotes && (
+                    {normalizedDownloadInfo[0]?.releaseNotes && (
                         <Button variant="link" size="sm" className="gap-1 p-0 h-auto">
                             Release Notes
                             <ExternalLink className="h-3 w-3" />

@@ -5,6 +5,7 @@ import type {
     DesktopAgent,
     AgentConfig,
     AgentDownloadInfo,
+    AgentDownloadInfoItem,
     RegisterAgentResponse,
     AgentCheckResponse,
     Platform,
@@ -104,7 +105,37 @@ export function useAgentCheckInstalled() {
 export function useAgentDownloadInfo() {
     return useQuery({
         queryKey: desktopAgentKeys.downloadInfo(),
-        queryFn: () => api.get<AgentDownloadInfo>('/desktop-agent/download-info'),
+        queryFn: async () => {
+            const response = await api.get<AgentDownloadInfo | Record<string, any> | null>('/desktop-agent/download-info');
+
+            if (Array.isArray(response)) {
+                return response as AgentDownloadInfoItem[];
+            }
+
+            if (!response || typeof response !== 'object') {
+                return [] as AgentDownloadInfoItem[];
+            }
+
+            const normalized: AgentDownloadInfoItem[] = [];
+            const legacyEntries = [
+                { platform: 'WINDOWS' as const, downloadUrl: response.windows, version: response.version },
+                { platform: 'MAC' as const, downloadUrl: response.mac, version: response.version },
+                { platform: 'LINUX' as const, downloadUrl: response.linux, version: response.version },
+            ];
+
+            legacyEntries.forEach(({ platform, downloadUrl, version }) => {
+                if (downloadUrl) {
+                    normalized.push({
+                        platform,
+                        version: version || '1.0.0',
+                        downloadUrl,
+                        releaseNotes: response.releaseNotes,
+                    });
+                }
+            });
+
+            return normalized;
+        },
         staleTime: 5 * 60 * 1000, // 5 minutes
     });
 }

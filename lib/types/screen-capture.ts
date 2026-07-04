@@ -42,14 +42,26 @@ export interface AgentConfig {
     heartbeatInterval: number;
 }
 
-export interface AgentDownloadInfo {
+export interface AgentDownloadInfoItem {
+    platform: Platform;
     version: string;
+    downloadUrl: string;
+    releaseDate?: string;
+    fileSize?: number;
+    checksum?: string;
+    releaseNotes?: string;
+}
+
+export interface AgentDownloadInfoLegacy {
+    version?: string;
     windows?: string;
     mac?: string;
     linux?: string;
     releaseNotes?: string;
     minimumVersion?: string;
 }
+
+export type AgentDownloadInfo = AgentDownloadInfoItem[] | AgentDownloadInfoLegacy;
 
 export interface RegisterAgentResponse {
     agent: DesktopAgent;
@@ -60,6 +72,7 @@ export interface RegisterAgentResponse {
 export interface AgentCheckResponse {
     installed: boolean;
     online: boolean;
+    hasOnlineAgent?: boolean;
     agents?: DesktopAgent[];
 }
 

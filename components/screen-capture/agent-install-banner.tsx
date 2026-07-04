@@ -147,14 +147,18 @@ function DownloadDialog({ open, onOpenChange, settings, downloadInfo }: Download
         console.log('Downloading:', downloadUrl)
         setDownloading(platform)
 
-        // Create a temporary anchor element to trigger download
         const link = document.createElement('a')
         link.href = downloadUrl
-        link.download = '' // This will use the filename from the URL
+        link.rel = 'noopener noreferrer'
         link.target = '_blank'
+        link.style.display = 'none'
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
+
+        if (typeof window !== 'undefined') {
+            window.open(downloadUrl, '_blank', 'noopener,noreferrer')
+        }
 
         setTimeout(() => {
             setDownloading(null)
@@ -168,15 +172,17 @@ function DownloadDialog({ open, onOpenChange, settings, downloadInfo }: Download
         return `~${Math.round(mb)} MB`
     }
 
-    // Find platform info
-    const getPlatformDownloadUrl = (platformId: string) => {
-        if (!downloadInfo) return null;
-        switch (platformId) {
-            case 'WINDOWS': return downloadInfo.windows;
-            case 'MAC': return downloadInfo.mac;
-            case 'LINUX': return downloadInfo.linux;
-            default: return null;
-        }
+    const normalizedDownloadInfo = Array.isArray(downloadInfo)
+        ? downloadInfo
+        : [
+            downloadInfo?.windows ? { platform: 'WINDOWS', downloadUrl: downloadInfo.windows, version: downloadInfo.version || '1.0.0', releaseNotes: downloadInfo.releaseNotes } : null,
+            downloadInfo?.mac ? { platform: 'MAC', downloadUrl: downloadInfo.mac, version: downloadInfo.version || '1.0.0', releaseNotes: downloadInfo.releaseNotes } : null,
+            downloadInfo?.linux ? { platform: 'LINUX', downloadUrl: downloadInfo.linux, version: downloadInfo.version || '1.0.0', releaseNotes: downloadInfo.releaseNotes } : null,
+        ].filter(Boolean)
+
+    const getPlatformInfo = (platformId: string) => {
+        if (!normalizedDownloadInfo.length) return null;
+        return normalizedDownloadInfo.find((info) => info.platform.toUpperCase() === platformId)
     }
 
     const platforms = [
@@ -200,8 +206,7 @@ function DownloadDialog({ open, onOpenChange, settings, downloadInfo }: Download
         },
     ]
 
-    // Get the current version from the first available download
-    const currentVersion = downloadInfo?.[0]?.version || '1.0.0'
+    const currentVersion = normalizedDownloadInfo[0]?.version || '1.0.0'
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -221,7 +226,8 @@ function DownloadDialog({ open, onOpenChange, settings, downloadInfo }: Download
                     {platforms.map((platform) => {
                         const Icon = platform.icon
                         const isDownloading = downloading === platform.id
-                        const downloadUrl = getPlatformDownloadUrl(platform.id)
+                        const platformInfo = getPlatformInfo(platform.id)
+                        const downloadUrl = platformInfo?.downloadUrl
 
                         return (
                             <Card
@@ -272,7 +278,7 @@ function DownloadDialog({ open, onOpenChange, settings, downloadInfo }: Download
 
                 <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
                     <span>Version {downloadInfo?.version || '1.0.0'}</span>
-                    {downloadInfo?.releaseNotes && (
+                    {normalizedDownloadInfo[0]?.releaseNotes && (
                         <Button variant="link" size="sm" className="gap-1 p-0 h-auto">
                             Release Notes
                             <ExternalLink className="h-3 w-3" />
