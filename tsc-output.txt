@@ -1,0 +1,35 @@
+﻿app/dashboard/notifications/page.tsx(101,9): error TS2740: Type '{ PROJECT_ASSIGNMENT: { icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>; color: string; bg: string; label: string; }; ... 6 more ...; SYSTEM: { ...; }; }' is missing the following properties from type 'Record<NotificationType, { icon: any; color: string; bg: string; label: string; }>': SCREENSHOT_DELETED, TIME_DEDUCTED, AGENT_OFFLINE, AGENT_INSTALLED, and 15 more.
+app/superadmin/analysis/page.tsx(91,21): error TS2322: Type '(value: number) => [string, string]' is not assignable to type 'Formatter<ValueType, NameType> & ((value: ValueType, name: NameType, item: TooltipPayloadEntry, index: number, payload: TooltipPayload) => ReactNode | [...])'.
+  Type '(value: number) => [string, string]' is not assignable to type 'Formatter<ValueType, NameType>'.
+    Types of parameters 'value' and 'value' are incompatible.
+      Type 'ValueType | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+app/superadmin/companies/page.tsx(242,46): error TS2339: Property 'userLimit' does not exist on type 'SuperadminPlan'.
+app/superadmin/companies/page.tsx(427,44): error TS2339: Property 'userLimit' does not exist on type 'SuperadminPlan'.
+components/dashboard/screen-monitor/screenshot-gallery.tsx(155,9): error TS2353: Object literal may only specify known properties, and 'PERMISSION_DENIED' does not exist in type 'Record<CaptureStatus, { icon: any; color: string; label: string; }>'.
+components/dashboard/screen-monitor/screenshot-gallery.tsx(195,40): error TS2339: Property 'captureRate' does not exist on type 'NoInfer<ScreenshotStats>'.
+components/dashboard/screen-monitor/screenshot-gallery.tsx(196,40): error TS2339: Property 'totalIntervalMinutes' does not exist on type 'NoInfer<ScreenshotStats>'.
+components/dashboard/screen-monitor/screenshot-gallery.tsx(233,84): error TS2339: Property 'successfulCaptures' does not exist on type 'NoInfer<ScreenshotStats>'.
+components/dashboard/screen-monitor/screenshot-gallery.tsx(237,82): error TS2339: Property 'failedCaptures' does not exist on type 'NoInfer<ScreenshotStats>'.
+components/dashboard/screen-monitor/screenshot-gallery.tsx(241,83): error TS2339: Property 'captureRate' does not exist on type 'NoInfer<ScreenshotStats>'.
+components/dashboard/screen-monitor/screenshot-gallery.tsx(385,66): error TS18048: 'viewingScreenshot.monitorIndex' is possibly 'undefined'.
+components/ui/chart.tsx(109,3): error TS2339: Property 'payload' does not exist on type 'Omit<Props<ValueType, NameType>, PropertiesReadFromContext> & { active?: boolean | undefined; allowEscapeViewBox?: AllowInDimension | undefined; ... 24 more ...; wrapperStyle?: CSSProperties | undefined; } & ClassAttributes<...> & HTMLAttributes<...> & { ...; }'.
+components/ui/chart.tsx(114,3): error TS2339: Property 'label' does not exist on type 'Omit<Props<ValueType, NameType>, PropertiesReadFromContext> & { active?: boolean | undefined; allowEscapeViewBox?: AllowInDimension | undefined; ... 24 more ...; wrapperStyle?: CSSProperties | undefined; } & ClassAttributes<...> & HTMLAttributes<...> & { ...; }'.
+components/ui/chart.tsx(182,23): error TS7006: Parameter 'item' implicitly has an 'any' type.
+components/ui/chart.tsx(182,29): error TS7006: Parameter 'index' implicitly has an 'any' type.
+components/ui/chart.tsx(260,39): error TS2344: Type '"payload" | "verticalAlign"' does not satisfy the constraint '"string" | "name" | "path" | "filter" | "fill" | "values" | "method" | "mode" | "onError" | "id" | "role" | "style" | "slot" | "clipPath" | "mask" | "className" | "key" | "suppressHydrationWarning" | ... 432 more ... | "portal"'.
+  Type '"payload"' is not assignable to type '"string" | "name" | "path" | "filter" | "fill" | "values" | "method" | "mode" | "onError" | "id" | "role" | "style" | "slot" | "clipPath" | "mask" | "className" | "key" | "suppressHydrationWarning" | ... 432 more ... | "portal"'.
+components/ui/chart.tsx(266,17): error TS2339: Property 'length' does not exist on type '{}'.
+components/ui/chart.tsx(278,16): error TS2339: Property 'map' does not exist on type '{}'.
+components/ui/chart.tsx(278,21): error TS7006: Parameter 'item' implicitly has an 'any' type.
+lib/auth-context.tsx(78,9): error TS2353: Object literal may only specify known properties, and 'plan' does not exist in type 'Company'.
+lib/auth-context.tsx(83,9): error TS2353: Object literal may only specify known properties, and 'name' does not exist in type 'User'.
+lib/auth-context.tsx(101,9): error TS2353: Object literal may only specify known properties, and 'name' does not exist in type 'User'.
+lib/hooks/index.ts(16,1): error TS2308: Module './use-superadmin-companies' has already exported a member named 'SuperadminPlan'. Consider explicitly re-exporting to resolve the ambiguity.
+lib/hooks/use-activity-logs.ts(4,15): error TS2305: Module '"@/lib/types/index"' has no exported member 'ActivityType'.
+lib/hooks/use-screenshots.ts(98,72): error TS2554: Expected 1 arguments, but got 2.
+lib/hooks/use-screenshots.ts(118,76): error TS2554: Expected 1 arguments, but got 2.
+lib/hooks/use-superadmin-auth.ts(12,8): error TS2306: File 'D:/merittrackern/merit-tracker/lib/types.ts' is not a module.
+lib/mock-data.ts(1,109): error TS2306: File 'D:/merittrackern/merit-tracker/lib/types.ts' is not a module.
+lib/stores/superadmin-store.ts(4,57): error TS2306: File 'D:/merittrackern/merit-tracker/lib/types.ts' is not a module.
+lib/utils/superadmin-demo.ts(3,33): error TS2306: File 'D:/merittrackern/merit-tracker/lib/types.ts' is not a module.

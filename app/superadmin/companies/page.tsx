@@ -137,12 +137,28 @@ export default function Companies() {
     if (!editingCompany) return;
 
     try {
-      await updateCompanyMutation.mutateAsync({
+      const payload: {
+        id: string;
+        name?: string;
+        adminEmail?: string;
+        plan?: string;
+      } = {
         id: editingCompany.id,
-        name: companyName,
-        email: companyEmail,
-        plan: planName ?? editingCompany.plan,
-      });
+      };
+
+      if (companyName.trim() && companyName !== editingCompany.name) {
+        payload.name = companyName.trim();
+      }
+
+      if (companyEmail.trim() && companyEmail !== editingCompany.email) {
+        payload.adminEmail = companyEmail.trim();
+      }
+
+      if (planName && planName !== editingCompany.plan) {
+        payload.plan = planName.toLowerCase();
+      }
+
+      await updateCompanyMutation.mutateAsync(payload);
       setIsEditOpen(false);
       setEditingCompany(null);
       toast.success("Company updated successfully.");

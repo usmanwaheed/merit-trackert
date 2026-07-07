@@ -40,6 +40,7 @@ import {
     useDeleteSuperadminPlan,
     useUpdateSuperadminPlan,
 } from "@/lib/hooks/use-superadmin-plans";
+import { useSuperadminSubscriptionsData } from "@/lib/hooks/use-superadmin-subscriptions";
 
 interface Plan {
     id: string;
@@ -86,12 +87,13 @@ export default function Plans() {
         isActive: true,
     });
 
-    const { data, isLoading } = useSuperadminPlansData();
+    const { data: plans, isLoading } = useSuperadminPlansData();
+    const { data: subscriptionData } = useSuperadminSubscriptionsData();
     const createPlanMutation = useCreateSuperadminPlan();
     const deletePlanMutation = useDeleteSuperadminPlan();
 
-    const plans = (data?.plans ?? []) as Plan[];
-    const subscriptions = data?.subscriptions ?? [];
+    const planList = plans ?? [];
+    const subscriptions = subscriptionData?.subscriptions ?? [];
 
     const subscribersByPlan = useMemo(() => {
         return subscriptions.reduce<Record<string, number>>((acc, subscription) => {
@@ -101,7 +103,7 @@ export default function Plans() {
     }, [subscriptions]);
 
     const planCards = useMemo(() => {
-        return plans.map((plan) => {
+        return planList.map((plan) => {
             let tier: "starter" | "pro" | "enterprise" = "starter";
             if (plan.name.toLowerCase().includes("pro")) tier = "pro";
             if (plan.name.toLowerCase().includes("enterprise")) tier = "enterprise";
@@ -112,7 +114,7 @@ export default function Plans() {
                 subscribers: subscribersByPlan[plan.id] ?? 0,
             };
         });
-    }, [plans, subscribersByPlan]);
+    }, [planList, subscribersByPlan]);
 
     const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
     const updatePlanMutation = useUpdateSuperadminPlan();

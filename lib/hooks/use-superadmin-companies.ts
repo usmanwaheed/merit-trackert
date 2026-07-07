@@ -55,11 +55,19 @@ export function useCreateSuperadminCompany() {
     });
 }
 
+export interface UpdateSuperadminCompanyPayload {
+    id: string;
+    name?: string;
+    adminEmail?: string;
+    plan?: string;
+    status?: 'trial' | 'active' | 'suspended';
+}
+
 export function useUpdateSuperadminCompany() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ id, ...payload }: Partial<SuperadminCompany> & { id: string }) =>
+        mutationFn: ({ id, ...payload }: UpdateSuperadminCompanyPayload) =>
             superadminApi.patch<SuperadminCompany>(`/superadmin/companies/${id}`, payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: superadminCompaniesKeys.all });

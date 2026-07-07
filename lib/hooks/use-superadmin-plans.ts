@@ -28,8 +28,6 @@ export interface CreatePlanDto {
     isActive?: boolean;
 }
 
-import { SuperadminSubscription } from './use-superadmin-subscriptions';
-
 export const superadminPlansKeys = {
     all: ['superadmin', 'plans'] as const,
 };
@@ -37,14 +35,7 @@ export const superadminPlansKeys = {
 export function useSuperadminPlansData() {
     return useQuery({
         queryKey: superadminPlansKeys.all,
-        queryFn: async () => {
-            const [plans, subscriptions] = await Promise.all([
-                superadminApi.get<SuperadminPlan[]>('/superadmin/plans'),
-                superadminApi.get<SuperadminSubscription[]>('/superadmin/subscriptions'),
-            ]);
-
-            return { plans, subscriptions };
-        },
+        queryFn: () => superadminApi.get<SuperadminPlan[]>('/superadmin/plans'),
     });
 }
 

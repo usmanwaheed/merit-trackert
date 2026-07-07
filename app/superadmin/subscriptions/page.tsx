@@ -52,6 +52,7 @@ import {
   useCancelSubscription,
   useUpdateSubscription
 } from "@/lib/hooks/use-superadmin-subscriptions";
+import { SuperadminPlan, useSuperadminPlansData } from "@/lib/hooks/use-superadmin-plans";
 import { useSearchParams, useRouter } from "next/navigation";
 
 interface Subscription {
@@ -67,12 +68,7 @@ interface Subscription {
   planName?: string;
 }
 
-interface Plan {
-  id: string;
-  name: string;
-  pricePerMonth: number;
-  pricePerYear: number;
-}
+type Plan = SuperadminPlan;
 
 function getStatusBadge(status: string) {
   const styles: Record<string, string> = {
@@ -94,9 +90,10 @@ export default function Subscriptions() {
 
 function SubscriptionsContent() {
   const [searchQuery, setSearchQuery] = useState("");
-  const { data } = useSuperadminSubscriptionsData();
-  const subscriptions = data?.subscriptions ?? [];
-  const plans = data?.plans ?? [];
+  const { data: subscriptionsData } = useSuperadminSubscriptionsData();
+  const { data: plansData } = useSuperadminPlansData();
+  const subscriptions = subscriptionsData?.subscriptions ?? [];
+  const plans = plansData ?? [];
   const [planFilter, setPlanFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [billingFilter, setBillingFilter] = useState("all");
@@ -117,11 +114,12 @@ function SubscriptionsContent() {
   const formattedSubscriptions = useMemo(() => {
     return subscriptions.map((subscription) => {
       const plan = plans.find((item) => item.id === subscription.planId || item.name === subscription.planName);
-      const amount = subscription.period === "annual" ? plan?.pricePerYear : plan?.pricePerMonth;
+      const amount = subscription.period === "annual" ? plan?.yearlyPrice : plan?.monthlyPrice;
       return {
         ...subscription,
         company: subscription.companyName ?? "Unknown",
         plan: subscription.planName ?? plan?.name ?? "Plan",
+        planId: plan?.id ?? subscription.planId,
         billingCycle: subscription.period === "annual" ? "yearly" : "monthly",
         amount: amount ?? 0,
         nextBilling: formatDate(subscription.renewsOn),
@@ -156,7 +154,7 @@ function SubscriptionsContent() {
 
     try {
       await updateMutation.mutateAsync({
-        id: selectedSubscription.id,
+        id: selectedSubscription.companyId,
         planId: newPlanId,
       });
       setIsChangePlanOpen(false);
@@ -414,7 +412,7 @@ function SubscriptionsContent() {
                   <SelectContent>
                     {plans.map((plan) => (
                       <SelectItem key={plan.id} value={plan.id}>
-                        {plan.name} - ${selectedSubscription?.billingCycle === 'yearly' ? plan.pricePerYear : plan.pricePerMonth}
+                        {plan.name} - ${selectedSubscription?.billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice}
                       </SelectItem>
                     ))}
                   </SelectContent>
