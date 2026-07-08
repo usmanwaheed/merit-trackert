@@ -2,9 +2,8 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
 import { useRegisterCompany, useRegisterUser } from "@/lib/hooks"
 import { getErrorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -21,8 +20,6 @@ export default function RegisterPage() {
   const { data: settings } = usePlatformSettings()
   const [error, setError] = useState("")
   const [registerType, setRegisterType] = useState<"company" | "user">("company")
-  const searchParams = useSearchParams()
-
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -93,14 +90,6 @@ export default function RegisterPage() {
       })
     }
   }
-
-  useEffect(() => {
-    const companyCode = searchParams?.get("companyCode")?.trim()
-    if (companyCode) {
-      setFormData((prev) => ({ ...prev, companyCode }))
-      setRegisterType("user")
-    }
-  }, [searchParams])
 
   const updateForm = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
