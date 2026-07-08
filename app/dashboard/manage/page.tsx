@@ -79,6 +79,7 @@ import {
   Search,
   Crown,
   Play,
+  Copy,
 } from "lucide-react"
 import { toast } from "sonner"
 import type { User, UserRole, Department, Sop, Notification } from "@/lib/types/index"
@@ -122,6 +123,22 @@ export default function ManagePage() {
   const { data: company, isLoading: companyLoading } = useMyCompany()
   const { data: companyStats, isLoading: statsLoading } = useCompanyStats()
   const { data: subscription } = useSubscriptionStatus()
+
+  const handleCopyInviteLink = async () => {
+    if (!company?.companyCode) {
+      toast.error("Unable to build invite link")
+      return
+    }
+
+    try {
+      const inviteUrl = `${window.location.origin}/register?companyCode=${encodeURIComponent(company.companyCode)}`
+      await navigator.clipboard.writeText(inviteUrl)
+      toast.success("Invite link copied to clipboard")
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to copy invite link")
+    }
+  }
   const { data: users, isLoading: usersLoading } = useUsers()
   const { data: leaderboard } = useLeaderboard()
   const { data: departments, isLoading: deptsLoading } = useDepartments()
@@ -551,11 +568,20 @@ export default function ManagePage() {
                           <Building2 className="h-8 w-8 text-primary" />
                         </div>
                       )}
-                      <div>
+                      <div className="flex-1">
                         <h3 className="text-xl font-semibold">{company.name}</h3>
                         <p className="text-sm text-muted-foreground">
                           Code: <span className="font-mono font-medium">{company.companyCode}</span>
                         </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={handleCopyInviteLink}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy Invite Link
+                          </Button>
+                          <p className="text-xs text-muted-foreground">
+                            Send this link to team members so they can register using your company code.
+                          </p>
+                        </div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t">

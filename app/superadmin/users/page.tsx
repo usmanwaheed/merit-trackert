@@ -468,7 +468,7 @@ export default function Users() {
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
-                className={confirmAction === 'delete' ? 'bg-destructive text-white' : ''}
+                className={confirmAction === 'delete' ? 'bg-destructive' : ''}
                 onClick={handleConfirmActionSubmit}
               >
                 {confirmAction === 'delete'
